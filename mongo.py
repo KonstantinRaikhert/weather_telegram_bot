@@ -45,3 +45,11 @@ def get_user_coordinates(db, effective_user):
         return coordinates
     else:
         return None
+
+
+def save_user_name(db, effective_user, user_data):
+    db.users.update_one(
+        {'user_id': effective_user.id},
+        {'$set': {'first_name': user_data['first_name']}}
+    )
+    

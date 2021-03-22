@@ -52,23 +52,23 @@ def weather_now_formating(coordinates):
 
 
 
-# def get_geolocation_from_yandex():
-#     """
-#     Ответ геолокации
-#     """
-#     # headers = {'X-Yandex-API-Key': YA_TOKEN}
-#     params = {
-#     'apikey': YA_GEO_TOKEN,
-#     'geocode': 'Москва беловежская 61',
-#     'format': 'json',
-#     # 'geocode': '37.395675,55.704343',
-#     # 'lang': 'ru_RU',
-#     }
-#     try:
-#         response = requests.get(URL_2, params=params).json()
-#         return response
-#     except requests.RequestException as error:
-#         logging.error(error)
+def get_geolocation_from_yandex():
+    """
+    Ответ геолокации
+    """
+    # headers = {'X-Yandex-API-Key': YA_TOKEN}
+    params = {
+    'apikey': YA_GEO_TOKEN,
+    'geocode': 'Москва беловежская 61',
+    'format': 'json',
+    # 'geocode': '37.395675,55.704343',
+    # 'lang': 'ru_RU',
+    }
+    try:
+        response = requests.get(URL_2, params=params).json()
+        return response
+    except requests.RequestException as error:
+        logging.error(error)
 
 
 # pprint(get_geolocation_from_yandex())
