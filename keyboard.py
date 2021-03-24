@@ -1,5 +1,6 @@
 from telegram import ReplyKeyboardMarkup, KeyboardButton
 
+# Реализовать кнопку отмена для отображения basic
 
 CALLBACK_BUTTON_WEATHER = 'Узнать погоду 🌈'
 CALLBACK_BUTTON_CITY = 'Выбрать город 🌆'
@@ -26,8 +27,8 @@ def basic_keyboard():
 def geolocation_keyboard():
     keyboard = ReplyKeyboardMarkup(
         [
-            [CALLBACK_BUTTON_GEOPOSITION],
             [CALLBACK_BUTTON_SELECT_CITY],
+            [CALLBACK_BUTTON_GEOPOSITION],
         ],
         resize_keyboard=True
     )
@@ -37,8 +38,8 @@ def geolocation_keyboard():
 def settings_keyboard():
     keyboard = ReplyKeyboardMarkup(
         [
-            [CALLBACK_BUTTON_NAME],
             [CALLBACK_BUTTON_CITY],
+            [CALLBACK_BUTTON_NAME],
         ],
         resize_keyboard=True
     )

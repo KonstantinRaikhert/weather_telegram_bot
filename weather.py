@@ -1,10 +1,10 @@
-import os
 import logging
-import requests
+import os
 
+import requests
 from dotenv import load_dotenv
-from pprint import pprint
-from emoji_dictionary import CONDITION, WIND_DIR, DAYTIME
+
+from emoji_dictionary import CONDITION, DAYTIME, WIND_DIR
 from mongo import db, get_user_coordinates
 
 
@@ -48,48 +48,18 @@ def weather_now_formating(coordinates):
     return weather_now
 
 
-# weather = weather_now_formating()
-
-
-
-def get_geolocation_from_yandex():
+def get_geolocation_from_yandex(location):
     """
     Ответ геолокации
     """
-    # headers = {'X-Yandex-API-Key': YA_TOKEN}
     params = {
     'apikey': YA_GEO_TOKEN,
-    'geocode': 'Москва беловежская 61',
     'format': 'json',
-    # 'geocode': '37.395675,55.704343',
-    # 'lang': 'ru_RU',
+    'geocode': location,
+    'lang': 'ru_Ru',
     }
     try:
         response = requests.get(URL_2, params=params).json()
-        return response
+        return response['response']['GeoObjectCollection']['featureMember'][0]['GeoObject']
     except requests.RequestException as error:
         logging.error(error)
-
-
-# pprint(get_geolocation_from_yandex())
-
-
-# bot = telebot.TeleBot(TELEGA_TOKEN)
-# keyboard_start = telebot.types.ReplyKeyboardMarkup()
-# keyboard_start.row('Погода')
-
-# @bot.message_handler(commands=['start'])
-# def start_message(message):
-#     bot.send_message(message.chat.id, 'Хаюшки', reply_markup=keyboard_start)
-
-
-# @bot.message_handler(content_types=['text'])
-# def send_text(message):
-#     if message.text == 'Класс':
-#         bot.send_message(message.chat.id, f'Сейчас погода <b>{feels_like}</b>')
-
-
-# bot.polling()
-
-
-

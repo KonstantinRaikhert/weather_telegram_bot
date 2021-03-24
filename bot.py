@@ -1,27 +1,28 @@
-import os
 import logging
+import os
 
 from dotenv import load_dotenv
-
 from telegram.ext import (
-    Updater,
     CommandHandler,
-    MessageHandler,
-    Filters,
     ConversationHandler,
+    Filters,
+    MessageHandler,
+    Updater
 )
+
 from handlers import *
 from keyboard import (
-    CALLBACK_BUTTON_WEATHER,
-    CALLBACK_BUTTON_SETTINGS,
+    CALLBACK_BUTTON_CITY,
     CALLBACK_BUTTON_NAME,
+    CALLBACK_BUTTON_SETTINGS,
+    CALLBACK_BUTTON_WEATHER
 )
-
 
 load_dotenv()
 
 
 TELEGA_TOKEN = os.getenv('TELEGRAM_TOKEN')
+
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -64,8 +65,37 @@ def main() -> None:
             )]
         )
     )
+    dispatcher.add_handler(
+        ConversationHandler(
+            entry_points=[
+                MessageHandler(
+                    Filters.regex(CALLBACK_BUTTON_SELECT_CITY), change_city
+                )
+            ],
+            states={
+                'location': [MessageHandler(Filters.text, save_city)],
+            },
+            fallbacks=[MessageHandler(
+                Filters.location |
+                Filters.contact |
+                Filters.voice |
+                Filters.sticker |
+                Filters.photo |
+                Filters.video |
+                Filters.audio |
+                Filters.document,
+                dont_know
+            )]
+        )
+    )
+    dispatcher.add_handler(MessageHandler(
+        Filters.regex(CALLBACK_BUTTON_CITY),
+        get_geolocation
+        )
+    )
+    dispatcher.add_handler(MessageHandler(Filters.location, save_geolocation))
     dispatcher.add_handler(MessageHandler(Filters.text, default_answer))
-    dispatcher.add_handler(MessageHandler(Filters.location, get_geolocation))
+    
 
     updater.start_polling()
     updater.idle()

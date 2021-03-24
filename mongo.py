@@ -26,20 +26,21 @@ def search_or_save_user(db, effective_user, message):
     return user
 
 
-def save_user_geolocation(db, user, user_coord):
+def save_user_geolocation(db, user, user_coord, location):
     db.users.update_one(
         {'_id': user['_id']},
         {'$set': {
             'coordinates': {
                 'longitude': user_coord['longitude'],
                 'latitude': user_coord['latitude'],
-            }
+            },
+            'location': location,
         }}
     )
 
 
 def get_user_coordinates(db, effective_user):
-    user = db.users.find_one({'user_id': effective_user.id})
+    user = db.users.find_one({'user_id': effective_user})
     if 'coordinates' in user:
         coordinates = user['coordinates']
         return coordinates
