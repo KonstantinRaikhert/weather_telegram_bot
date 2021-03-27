@@ -38,9 +38,9 @@ def save_user_name(db, effective_user, user_data):
     )
 
 
-def save_user_geolocation(db, user, user_coord, location):
+def save_user_geolocation(db, effective_user, user_coord, location):
     db.users.update_one(
-        {'_id': user['_id']},
+        {'user_id': effective_user},
         {'$set': {
             'coordinates': {
                 'longitude': user_coord['longitude'],
@@ -60,9 +60,9 @@ def get_user_coordinates(db, effective_user):
         return None
 
 
-def save_user_timezone(db, user, user_timezone):
+def save_user_timezone(db, effective_user, user_timezone):
     db.users.update_one(
-        {'_id': user['_id']},
+        {'user_id': effective_user},
         {'$set': {'timezone': user_timezone}}
     )
 

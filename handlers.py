@@ -56,19 +56,20 @@ def get_geolocation_and_set_time(update: Update, context: CallbackContext):
         )
     )
 
-
+# локация еще не приходит пересмотреть вводы
 def save_geolocation(update: Update, _: CallbackContext):
     coordinates = update.message.location
-    user = search_or_save_user(
-        db, update.effective_user, update.effective_message
-    )
     timezone = get_timezone_for_geolocation(coordinates)
     coordinates_for_ya = (
         str(coordinates['longitude']) + ',' + str(coordinates['latitude'])
     )
     location = get_geolocation_from_yandex(coordinates_for_ya)['metaDataProperty']['GeocoderMetaData']['text']
-    save_user_geolocation(db, user, coordinates, location)
-    save_user_timezone(db, user, timezone)
+    save_user_geolocation(db, update.effective_user.id, coordinates, location)
+    user = search_or_save_user(
+        db, update.effective_user, update.effective_message
+    )
+    save_user_geolocation(db, update.effective_user.id, coordinates, location)
+    save_user_timezone(db, update.effective_user.id, timezone)
     text = (
         'Готово {}. Буду присылать погоду для:\n'
         '{}'.format(user['first_name'], user['location'])
@@ -87,9 +88,6 @@ def change_city(update: Update, _: CallbackContext):
 
 def save_city(update: Update, context: CallbackContext):
     context._user_data['location'] = update.message.text
-    user = search_or_save_user(
-        db, update.effective_user, update.effective_message
-    )
     location_for_ya = get_geolocation_from_yandex(
         context._user_data['location']
     )
@@ -99,8 +97,11 @@ def save_city(update: Update, context: CallbackContext):
     }
     location = location_for_ya['metaDataProperty']['GeocoderMetaData']['text']
     timezone = get_timezone_for_geolocation(user_coord)
-    save_user_geolocation(db, user, user_coord, location)
-    save_user_timezone(db, user, timezone)
+    save_user_geolocation(db, update.effective_user.id, user_coord, location)
+    save_user_timezone(db, update.effective_user.id, timezone)
+    user = search_or_save_user(
+        db, update.effective_user, update.effective_message
+    )
     text = (
         'Готово {}. Буду присылать погоду для:\n'
         '{}'.format(user['first_name'], user['location'])
