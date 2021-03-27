@@ -1,22 +1,25 @@
-import logging
 import os
+import logging
 
 from dotenv import load_dotenv
 from telegram.ext import (
     CommandHandler,
     ConversationHandler,
+    CallbackQueryHandler,
     Filters,
     MessageHandler,
     Updater
 )
 
-from handlers import *
 from keyboard import (
     CALLBACK_BUTTON_CITY,
     CALLBACK_BUTTON_NAME,
     CALLBACK_BUTTON_SETTINGS,
-    CALLBACK_BUTTON_WEATHER
+    CALLBACK_BUTTON_WEATHER,
+    CALLBACK_BUTTON_CANCEL,
 )
+from handlers import *
+
 
 load_dotenv()
 
@@ -33,7 +36,9 @@ logging.basicConfig(
 
 def main() -> None:
     updater = Updater(TELEGA_TOKEN)
+
     logging.info('Start bot')
+
     dispatcher = updater.dispatcher
     dispatcher.add_handler(CommandHandler('start', start))
     dispatcher.add_handler(
@@ -41,6 +46,19 @@ def main() -> None:
     )
     dispatcher.add_handler(
         MessageHandler(Filters.regex(CALLBACK_BUTTON_SETTINGS), get_settings)
+    )
+    dispatcher.add_handler(
+        MessageHandler(
+            Filters.regex(CALLBACK_BUTTON_TIME), change_time_notification
+        )
+    )
+    dispatcher.add_handler(
+        MessageHandler(
+            Filters.regex(CALLBACK_BUTTON_CANCEL), cancel_return_basic_keyboard
+        )
+    )
+    dispatcher.add_handler(
+        CallbackQueryHandler(change_time_inlinebutton_pressed)
     )
     dispatcher.add_handler(
         ConversationHandler(
@@ -88,16 +106,15 @@ def main() -> None:
             )]
         )
     )
-    dispatcher.add_handler(MessageHandler(
-        Filters.regex(CALLBACK_BUTTON_CITY),
-        get_geolocation
+    dispatcher.add_handler(
+        MessageHandler(
+            Filters.regex(CALLBACK_BUTTON_CITY), get_geolocation_and_set_time
         )
     )
     dispatcher.add_handler(MessageHandler(Filters.location, save_geolocation))
     dispatcher.add_handler(MessageHandler(Filters.text, default_answer))
-    
 
-    updater.start_polling()
+    updater.start_polling(bootstrap_retries=-1)
     updater.idle()
 
 

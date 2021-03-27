@@ -21,24 +21,6 @@ CONDITION = {
 }
 
 
-qwerty = {
-    'condition': 'облачно с прояснениями 🌥',
-    'daytime': 'северный',
-    'feels_like': -7,
-    'humidity': 80,
-    'icon': 'bkn_n',
-    'obs_time': 1616180400,
-    'polar': False,
-    'pressure_mm': 745,
-    'pressure_pa': 993,
-    'season': 'spring',
-    'temp': -3,
-    'wind_dir': 'северный',
-    'wind_gust': 5.4,
-    'wind_speed': 2
-}
-
-
 MOON_CODE = {
     'moon-code-0': '🌕',
     'moon-code-1': '🌘',
@@ -60,8 +42,10 @@ MOON_CODE = {
 
 
 DAYTIME = {
-    'n': 'тёмное время суток',
-    'd': 'светлое время суток',
+    'night': 'Ночью',
+    'morning': 'Утром',
+    'day': 'Днём',
+    'evening': 'Вечером',
 }
 
 
