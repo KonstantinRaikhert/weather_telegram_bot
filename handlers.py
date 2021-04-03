@@ -22,6 +22,10 @@ logging.basicConfig(
 
 
 def start(update: Update, _: CallbackContext):
+    update.message.reply_text('Введите пароль для использования')
+
+
+def starting(update: Update, _: CallbackContext):
     user = search_or_save_user(
         db, update.effective_user, update.effective_message
     )
@@ -31,7 +35,7 @@ def start(update: Update, _: CallbackContext):
         'Каждый день в нужное время\n'
         'я буду присылать текущую погоду\n'
         'и прогноз погоды на день и ночь.\n'
-        'В настройках можно выбрать\n'
+        'В настройках нужно выбрать\n'
         'текущий город и время оповещения.'
         ''.format(GREETING, user['first_name'])
     )
@@ -40,23 +44,20 @@ def start(update: Update, _: CallbackContext):
     )
 
 
-def get_geolocation_and_set_time(update: Update, context: CallbackContext):
-    hour, minute = get_time_notification(db, update.effective_user.id)
-    tzinfo = pytz.timezone(get_user_timezone(db, update.effective_user.id))
+def remove_job(name: str, context: CallbackContext):
+    current_jobs = context.job_queue.get_jobs_by_name(name)
+    for job in current_jobs:
+        job.schedule_removal()
+
+
+def get_geolocation(update: Update, context: CallbackContext):
     text = (
         'Выберите удобный способ для\n'
         'определения Вашего местонахождения'
     )
     update.message.reply_text(text, reply_markup=geolocation_keyboard())
-    context.job_queue.run_daily(
-        send_weather_in_due_time,
-        context=update.message.chat_id,
-        time=datetime.time(
-            hour=hour, minute=minute, tzinfo=tzinfo
-        )
-    )
 
-# локация еще не приходит пересмотреть вводы
+
 def save_geolocation(update: Update, _: CallbackContext):
     coordinates = update.message.location
     timezone = get_timezone_for_geolocation(coordinates)
@@ -121,13 +122,33 @@ def change_time_notification(update: Update, context: CallbackContext):
 
 def change_time_inlinebutton_pressed(update: Update, context: CallbackContext):
     query = update.callback_query
+    chat_id = query.message.chat.id
     data = query.data
-    text = 'Отлично! Буду уведовмлять в {}'.format(data)
     save_time_notification(db, update.effective_user, data)
+    time = get_time_notification(db, update.effective_user.id)
+    hour = time[0]
+    minute = time[1]
+    tzinfo = pytz.timezone(get_user_timezone(db, update.effective_user.id))
+    text = 'Буду уведовмлять в {}'.format(data)
+    sticker_id = (
+        'CAACAgIAAxkBAAECJG5gaNIygx4rNnhNevnPojRaUi8u1AAC3QMAAvJ-ggxtuk_XOcwsnR4E'
+    )
     context.bot.edit_message_text(
         text=text,
         chat_id=query.message.chat.id,
         message_id=query.message.message_id
+    )
+    update.effective_chat.send_sticker(
+        sticker=sticker_id, reply_markup=basic_keyboard()
+    )
+    remove_job(str(chat_id), context)
+    context.job_queue.run_daily(
+        send_weather_in_due_time,
+        time=datetime.time(
+            hour=hour, minute=minute, tzinfo=tzinfo
+        ),
+        context=chat_id,
+        name=str(chat_id)
     )
 
 
@@ -158,10 +179,14 @@ def save_new_name(update: Update, context: CallbackContext):
 
 
 def default_answer(update: Update, context: CallbackContext):
-    text = (
-        'Я пока не умею поддерживать диалог, но возможно меня скоро научат. 😎'
-    )
-    update.message.reply_text(text, reply_markup=basic_keyboard())
+    user = search_user(db, update.effective_user)
+    if user:
+        text = (
+            'Я пока не умею поддерживать диалог, но возможно меня скоро научат. 😎'
+        )
+        update.message.reply_text(text, reply_markup=basic_keyboard())
+    else:
+        update.message.reply_text('Неправильный пароль')
 
 
 def cancel_return_basic_keyboard(update: Update, _: CallbackContext):
@@ -179,75 +204,88 @@ def dont_know(update: Update, _: CallbackContext):
 
 def send_weather(update: Update, context: CallbackContext):
     coordinates = get_user_coordinates(db, update.effective_user.id)
-    if coordinates == None:
-        text = 'Для начала укажите в настройках Ваше местоположение'
+    time = get_time_notification(db, update.effective_user.id)
+    if coordinates is None:
+        text = (
+            'Для начала укажите в настройках Ваше местоположение\n'
+            'и время оповещения.'
+        )
+        update.message.reply_text(text, reply_markup=basic_keyboard())
+    elif time is None:
+        text = (
+            'Bремя оповещения забыли указать...'
+        )
         update.message.reply_text(text, reply_markup=basic_keyboard())
     else:
         weather = weather_formating(coordinates)
-        text_fact = (
-            '<b>{}, сейчас за окном:</b>\n'
-            '   <i>{condition}</i>\n'
-            '   <i>Температура</i> <b>{temp}°</b>.\n'
-            '   <i>А вот ощущается как</i> <b>{feels_like}°</b>.\n'
-            '   <i>Влажность воздуха</i> <b>{humidity} %</b>.\n'
-            '   <i>Давление</i> <b>{pressure_mm} мм. рт. ст.</b>\n'
-            '   <i>Ветер</i> <b>{wind_dir}</b>.\n'
-            '   <i>Скорость</i> <b>{wind_speed} м/с</b>.\n'
-            '   <i>Порывы</i> <b>{wind_gust} м/с</b>.\n'
-        ).format(get_user_name(db, update.effective_user.id), **weather['fact'])
-        text_forecast = (
-            '   <b>Прогноз на {date}:</b>\n'
-            '   <i>Восход - <b>{sunrise}</b>, Закат - <b>{sunrise}</b>.</i>\n'
-            '   <i>Фаза Луны - {moon_text}</i>\n'
-        ).format(**weather['forecast'])
-        text_forecast_night = (
-            '<b>{part_name} ожидается:</b>\n'
-            '   <i>{condition}</i>\n'
-            '   <i>Средняя температура</i> <b>{temp_avg}°</b>.\n'
-            '   <i>мин. - </i> <b>{temp_min}°</b>.'
-            '   <i>макс. - </i> <b>{temp_max}°</b>.\n'
-            '   <i>Будет ощущаться</i> <b>{feels_like}°</b>.\n'
-            '   <i>Влажность воздуха</i> <b>{humidity} %</b>.\n'
-            '   <i>Давление</i> <b>{pressure_mm} мм. рт. ст.</b>\n'
-            '   <i>Ветер</i> <b>{wind_dir}</b>.\n'
-            '   <i>Скорость</i> <b>{wind_speed} м/с</b>.\n'
-            '   <i>Порывы</i> <b>{wind_gust} м/с</b>.\n'
-        ).format(**weather['forecast_night'])
-        text_forecast_day = (
-            '<b>{part_name}:</b>\n'
-            '   <i>{condition}</i>\n'
-            '   <i>Средняя температура</i> <b>{temp_avg}°</b>.\n'
-            '   <i>мин. - </i> <b>{temp_min}°</b>.'
-            '   <i>макс. - </i> <b>{temp_max}°</b>.\n'
-            '   <i>Будет ощущаться</i> <b>{feels_like}°</b>.\n'
-            '   <i>Влажность воздуха</i> <b>{humidity} %</b>.\n'
-            '   <i>Давление</i> <b>{pressure_mm} мм. рт. ст.</b>\n'
-            '   <i>Ветер</i> <b>{wind_dir}</b>.\n'
-            '   <i>Скорость</i> <b>{wind_speed} м/с</b>.\n'
-            '   <i>Порывы</i> <b>{wind_gust} м/с</b>.\n'
-        ).format(**weather['forecast_day'])
-        text = (
-            text_fact + text_forecast + text_forecast_night + text_forecast_day
-        )
-        update.message.reply_text(
-            text,
-            parse_mode=ParseMode.HTML,
-            reply_markup=basic_keyboard()
-        )
+        if weather != None:
+            text_fact = (
+                '<b>{}, сейчас за окном:</b>\n'
+                '   <i>{condition}</i>\n'
+                '   <i>Температура</i> <b>{temp}°</b>.\n'
+                '   <i>А вот ощущается как</i> <b>{feels_like}°</b>.\n'
+                '   <i>Влажность воздуха</i> <b>{humidity} %</b>.\n'
+                '   <i>Давление</i> <b>{pressure_mm} мм. рт. ст.</b>\n'
+                '   <i>Ветер</i> <b>{wind_dir}</b>.\n'
+                '   <i>Скорость</i> <b>{wind_speed} м/с</b>.\n'
+                '   <i>Порывы</i> <b>{wind_gust} м/с</b>.\n'
+            ).format(get_user_name(db, update.effective_user.id), **weather['fact'])
+            text_forecast = (
+                '   <b>Прогноз на {date}:</b>\n'
+                '   <i>Восход - <b>{sunrise}</b>, Закат - <b>{sunset}</b>.</i>\n'
+                '   <i>Фаза Луны - {moon_text}</i>\n'
+            ).format(**weather['forecast'])
+            text_forecast_night = (
+                '<b>{part_name} ожидается:</b>\n'
+                '   <i>{condition}</i>\n'
+                '   <i>Средняя температура</i> <b>{temp_avg}°</b>.\n'
+                '   <i>мин.:  </i> <b>{temp_min}°</b>.'
+                '   <i>макс.:  </i> <b>{temp_max}°</b>.\n'
+                '   <i>Будет ощущаться</i> <b>{feels_like}°</b>.\n'
+                '   <i>Влажность воздуха</i> <b>{humidity} %</b>.\n'
+                '   <i>Давление</i> <b>{pressure_mm} мм. рт. ст.</b>\n'
+                '   <i>Ветер</i> <b>{wind_dir}</b>.\n'
+                '   <i>Скорость</i> <b>{wind_speed} м/с</b>.\n'
+                '   <i>Порывы</i> <b>{wind_gust} м/с</b>.\n'
+            ).format(**weather['forecast_night'])
+            text_forecast_day = (
+                '<b>{part_name}:</b>\n'
+                '   <i>{condition}</i>\n'
+                '   <i>Средняя температура</i> <b>{temp_avg}°</b>.\n'
+                '   <i>мин.:  </i> <b>{temp_min}°</b>.'
+                '   <i>макс.:  </i> <b>{temp_max}°</b>.\n'
+                '   <i>Будет ощущаться</i> <b>{feels_like}°</b>.\n'
+                '   <i>Влажность воздуха</i> <b>{humidity} %</b>.\n'
+                '   <i>Давление</i> <b>{pressure_mm} мм. рт. ст.</b>\n'
+                '   <i>Ветер</i> <b>{wind_dir}</b>.\n'
+                '   <i>Скорость</i> <b>{wind_speed} м/с</b>.\n'
+                '   <i>Порывы</i> <b>{wind_gust} м/с</b>.\n'
+            ).format(**weather['forecast_day'])
+            text = (
+                text_fact + text_forecast + text_forecast_night + text_forecast_day
+            )
+            update.message.reply_text(
+                text,
+                parse_mode=ParseMode.HTML,
+                reply_markup=basic_keyboard()
+            )
+        else:
+            text = (
+                'Похоже сегодня я уже устал смотреть на погоду.\n'
+                'обращайтесь завтра!'
+            )
+            update.message.reply_text(
+                text,
+                reply_markup=basic_keyboard()
+            )
 
 
 def send_weather_in_due_time(context: CallbackContext):
     job = context.job
     coordinates = get_user_coordinates(db, job.context)
-    if coordinates == None:
-        text = (
-            'Укажите в настройках Ваше местоположение\n'
-            'и тогда я смогу присылать сводки погоды.'
-        )
-        context.bot.send_message(job.context, text)
-    else:
-        weather = weather_formating(coordinates)
-        username = get_user_name(db, job.context)
+    weather = weather_formating(coordinates)
+    username = get_user_name(db, job.context)
+    if weather != None:
         text_fact = (
             '<b>{}, сейчас за окном:</b>\n'
             '   <i>{condition}</i>\n'
@@ -261,15 +299,15 @@ def send_weather_in_due_time(context: CallbackContext):
         ).format(username, **weather['fact'])
         text_forecast = (
             '   <b>Прогноз на {date}:</b>\n'
-            '   <i>Восход - <b>{sunrise}</b>, Закат - <b>{sunrise}</b>.</i>\n'
+            '   <i>Восход - <b>{sunrise}</b>, Закат - <b>{sunset}</b>.</i>\n'
             '   <i>Фаза Луны - {moon_text}</i>\n'
         ).format(**weather['forecast'])
         text_forecast_night = (
             '<b>{part_name} ожидается:</b>\n'
             '   <i>{condition}</i>\n'
             '   <i>Средняя температура</i> <b>{temp_avg}°</b>.\n'
-            '   <i>мин. - </i> <b>{temp_min}°</b>.'
-            '   <i>макс. - </i> <b>{temp_max}°</b>.\n'
+            '   <i>мин.:  </i> <b>{temp_min}°</b>.'
+            '   <i>макс.:  </i> <b>{temp_max}°</b>.\n'
             '   <i>Будет ощущаться</i> <b>{feels_like}°</b>.\n'
             '   <i>Влажность воздуха</i> <b>{humidity} %</b>.\n'
             '   <i>Давление</i> <b>{pressure_mm} мм. рт. ст.</b>\n'
@@ -281,8 +319,8 @@ def send_weather_in_due_time(context: CallbackContext):
             '<b>{part_name}:</b>\n'
             '   <i>{condition}</i>\n'
             '   <i>Средняя температура</i> <b>{temp_avg}°</b>.\n'
-            '   <i>мин. - </i> <b>{temp_min}°</b>.'
-            '   <i>макс. - </i> <b>{temp_max}°</b>.\n'
+            '   <i>мин.:  </i> <b>{temp_min}°</b>.'
+            '   <i>макс.:  </i> <b>{temp_max}°</b>.\n'
             '   <i>Будет ощущаться</i> <b>{feels_like}°</b>.\n'
             '   <i>Влажность воздуха</i> <b>{humidity} %</b>.\n'
             '   <i>Давление</i> <b>{pressure_mm} мм. рт. ст.</b>\n'
@@ -293,4 +331,10 @@ def send_weather_in_due_time(context: CallbackContext):
         text = (
             text_fact + text_forecast + text_forecast_night + text_forecast_day
         )
-    context.bot.send_message(job.context, text, parse_mode=ParseMode.HTML)
+        context.bot.send_message(job.context, text, parse_mode=ParseMode.HTML)
+    else:
+        text = (
+                'Похоже сегодня я уже устал смотреть на погоду.\n'
+                'обращайтесь завтра!'
+            )
+        context.bot.send_message(job.context, text)

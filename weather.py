@@ -30,79 +30,83 @@ def get_weather_from_yandex(coordinates):
         'lang': 'ru_RU',
     }
     try:
-        response = requests.get(URL_WEATHER, headers=headers, params=params).json()
-        return response
+        response = requests.get(URL_WEATHER, headers=headers, params=params)
+        if response.status_code == '403':
+            return None
+        else:
+            return response.json()
     except requests.RequestException as error:
         logging.error(error)
 
 
 def weather_formating(coordinates):
     weather = get_weather_from_yandex(coordinates)
+    if weather == None:
+        return None
+    else:
+        weather_fact = weather['fact']
+        weather_fact = {
+            key: CONDITION.get(value, value)
+            for key, value in weather_fact.items()
+        }
+        weather_fact = {
+            key: WIND_DIR.get(value, value)
+            for key, value in weather_fact.items()
+        }
 
-    weather_fact = weather['fact']
-    weather_fact = {
-        key: CONDITION.get(value, value)
-        for key, value in weather_fact.items()
-    }
-    weather_fact = {
-        key: WIND_DIR.get(value, value)
-        for key, value in weather_fact.items()
-    }
+        weather_forecast = weather['forecast']
+        weather_all_day = weather_forecast.pop('parts')
+        weather_forecast = {
+            key: MOON_CODE.get(value, value)
+            for key, value in weather_forecast.items()
+        }
+        weather_forecast.update(
+            date=parse(weather_forecast['date']).strftime('%d.%m.%Y')
+        )
 
-    weather_forecast = weather['forecast']
-    weather_all_day = weather_forecast.pop('parts')
-    weather_forecast = {
-        key: MOON_CODE.get(value, value)
-        for key, value in weather_forecast.items()
-    }
-    weather_forecast.update(
-        date=parse(weather_forecast['date']).strftime('%d.%m.%Y')
-    )
+        weather_forecast_night = weather_all_day[0]
+        weather_forecast_night = {
+            key: DAYTIME.get(value, value)
+            for key, value in weather_forecast_night.items()
+        }
+        weather_forecast_night = {
+            key: CONDITION.get(value, value)
+            for key, value in weather_forecast_night.items()
+        }
+        weather_forecast_night = {
+            key: WIND_DIR.get(value, value)
+            for key, value in weather_forecast_night.items()
+        }
 
-    weather_forecast_night = weather_all_day[0]
-    weather_forecast_night = {
-        key: DAYTIME.get(value, value)
-        for key, value in weather_forecast_night.items()
-    }
-    weather_forecast_night = {
-        key: CONDITION.get(value, value)
-        for key, value in weather_forecast_night.items()
-    }
-    weather_forecast_night = {
-        key: WIND_DIR.get(value, value)
-        for key, value in weather_forecast_night.items()
-    }
+        weather_forecast_day = weather_all_day[1]
+        weather_forecast_day = {
+            key: DAYTIME.get(value, value)
+            for key, value in weather_forecast_day.items()
+        }
+        weather_forecast_day = {
+            key: CONDITION.get(value, value)
+            for key, value in weather_forecast_day.items()
+        }
+        weather_forecast_day = {
+            key: WIND_DIR.get(value, value)
+            for key, value in weather_forecast_day.items()
+        }
+        weather_dict = {
+            'fact': weather_fact,
+            'forecast': weather_forecast,
+            'forecast_night': weather_forecast_night,
+            'forecast_day': weather_forecast_day,
+        }
 
-    weather_forecast_day = weather_all_day[1]
-    weather_forecast_day = {
-        key: DAYTIME.get(value, value)
-        for key, value in weather_forecast_day.items()
-    }
-    weather_forecast_day = {
-        key: CONDITION.get(value, value)
-        for key, value in weather_forecast_day.items()
-    }
-    weather_forecast_day = {
-        key: WIND_DIR.get(value, value)
-        for key, value in weather_forecast_day.items()
-    }
-    
-    weather_dict = {
-        'fact': weather_fact,
-        'forecast': weather_forecast,
-        'forecast_night': weather_forecast_night,
-        'forecast_day': weather_forecast_day,
-    }
-
-    return weather_dict
+        return weather_dict
 
 
 def get_geolocation_from_yandex(location):
     params = {
-    'apikey': YA_GEO_TOKEN,
-    'format': 'json',
-    'geocode': location,
-    'lang': 'ru_Ru',
+        'apikey': YA_GEO_TOKEN,
+        'format': 'json',
+        'geocode': location,
+        'lang': 'ru_Ru',
     }
     try:
         response = requests.get(URL_GEOCODER, params=params).json()

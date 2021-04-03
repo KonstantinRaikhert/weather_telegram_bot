@@ -10,6 +10,8 @@ load_dotenv()
 MONGO_AUTH = os.getenv('PASSWORD_MONGO')
 
 client = MongoClient(MONGO_AUTH)
+# client = MongoClient('mongodb://localhost:27017/')
+# db = client.telegram_bot
 db = client.get_database('telegram_bot')
 
 
@@ -26,9 +28,14 @@ def search_or_save_user(db, effective_user, message):
     return user
 
 
+def search_user(db, effective_user):
+    user = db.users.find_one({'user_id': effective_user.id})
+    return user
+
+
 def get_user_name(db, effective_chat):
     user = db.users.find_one({'user_id': effective_chat})
-    return user['first_name']       
+    return user['first_name']
 
 
 def save_user_name(db, effective_user, user_data):
@@ -69,12 +76,7 @@ def save_user_timezone(db, effective_user, user_timezone):
 
 def get_user_timezone(db, effective_user):
     user = db.users.find_one({'user_id': effective_user})
-    default = 'Europe/Moscow'
-    if 'timezone' in user:
-        timezone = user['timezone']
-        return timezone
-    else:
-        return default
+    return user['timezone']
 
 
 def save_time_notification(db, effective_user, time_data):
@@ -86,11 +88,10 @@ def save_time_notification(db, effective_user, time_data):
 
 def get_time_notification(db, effective_user):
     user = db.users.find_one({'user_id': effective_user})
-    default = [10, 0]
     if 'time_notification' in user:
         time_notification = list(
             map(int, user['time_notification'].split(':'))
         )
         return time_notification
     else:
-        return default
+        return None
