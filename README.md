@@ -22,3 +22,6 @@ Returns the current weather and forecast by coordinates. The free version allows
 Returns the name of the locality by coordinates, or coordinates by name. The free version allows 1000 requests per day.
 * [TimeZoneDB](https://timezonedb.com/)
 Returns the necessary time zone by coordinates. This is required to send a local time weather notification.
+
+___
+### The database used here is Mongodb. But you can change it to a more convenient one for you.
