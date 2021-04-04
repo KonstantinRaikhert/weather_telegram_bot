@@ -7,12 +7,16 @@ from pymongo import MongoClient
 load_dotenv()
 
 
-MONGO_AUTH = os.getenv('PASSWORD_MONGO')
+client = MongoClient('mongodb://localhost:27017/')
+db = client.telegram_bot
 
+'''
+Using by the MongoDB Atlas:
+
+MONGO_AUTH = os.getenv('PASSWORD_MONGO')
 client = MongoClient(MONGO_AUTH)
-# client = MongoClient('mongodb://localhost:27017/')
-# db = client.telegram_bot
-db = client.get_database('telegram_bot')
+# db = client.get_database('telegram_bot')
+'''
 
 
 def search_or_save_user(db, effective_user, message):
