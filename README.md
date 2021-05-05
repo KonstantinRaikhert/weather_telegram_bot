@@ -1,7 +1,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![example workflow](https://github.com/raikhert13/weather_telegram_bot/actions/workflows/bot_workflow.yml/badge.svg)
-![](https://img.shields.io/pypi/v/python-telegram-bot)
-![](https://img.shields.io/pypi/pyversions/python-telegram-bot)
+![](https://img.shields.io/pypi/v/python-telegram-bot?style=plastic)
+![](https://img.shields.io/pypi/pyversions/python-telegram-bot?style=plastic)
 ![](https://img.shields.io/github/repo-size/raikhert13/weather_telegram_bot?style=plastic)
 
 # Weather Bot for travelers.
