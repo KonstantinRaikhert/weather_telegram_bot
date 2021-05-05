@@ -1,5 +1,7 @@
 import os
 import logging
+import pytz
+import datetime
 
 from dotenv import load_dotenv
 
@@ -9,7 +11,7 @@ from telegram.ext import (
     CallbackQueryHandler,
     Filters,
     MessageHandler,
-    Updater
+    Updater,
 )
 
 from keyboard import (
@@ -19,51 +21,68 @@ from keyboard import (
     CALLBACK_BUTTON_WEATHER,
     CALLBACK_BUTTON_CANCEL,
     CALLBACK_BUTTON_TIME,
-    CALLBACK_BUTTON_SELECT_CITY
+    CALLBACK_BUTTON_SELECT_CITY,
 )
 from mongo import db
-from handlers import *
+from handlers import (
+    get_time_notification,
+    get_user_timezone,
+    send_weather_in_due_time,
+    start,
+    starting,
+    send_weather,
+    get_settings,
+    change_time_notification,
+    cancel_return_basic_keyboard,
+    change_time_inlinebutton_pressed,
+    change_name,
+    save_new_name,
+    dont_know,
+    change_city,
+    save_city,
+    get_geolocation,
+    save_geolocation,
+    default_answer,
+)
 
 
 load_dotenv()
 
 
-TELEGA_TOKEN = os.getenv('TELEGRAM_TOKEN')
-PASSWORD_FOR_USE = os.getenv('PASSWORD_FOR_USE')
+TELEGA_TOKEN = os.getenv("TELEGRAM_TOKEN")
+PASSWORD_FOR_USE = os.getenv("PASSWORD_FOR_USE")
 
 
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
-    filename='bot.log'
+    filename="bot.log",
 )
 
 
 def run_jobs(update):
     users = db.users.find()
     for user in users:
-        chat_id = user['chat_id']
+        chat_id = user["chat_id"]
         time = get_time_notification(db, chat_id)
         hour = time[0]
         minute = time[1]
         tzinfo = pytz.timezone(get_user_timezone(db, chat_id))
         update.job_queue.run_daily(
             callback=send_weather_in_due_time,
-            time=datetime.time(
-                hour=hour, minute=minute, tzinfo=tzinfo
-            ),
+            time=datetime.time(hour=hour, minute=minute, tzinfo=tzinfo),
             context=chat_id,
-            name=str(chat_id)
+            name=str(chat_id),
         )
 
 
 def main() -> None:
     updater = Updater(TELEGA_TOKEN)
 
-    logging.info('Start bot')
+    logging.info("Start bot")
 
     dispatcher = updater.dispatcher
-    dispatcher.add_handler(CommandHandler('start', start))
+    dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(
         MessageHandler(Filters.regex(str(PASSWORD_FOR_USE)), starting)
     )
@@ -94,19 +113,21 @@ def main() -> None:
                 )
             ],
             states={
-                'first_name': [MessageHandler(Filters.text, save_new_name)],
+                "first_name": [MessageHandler(Filters.text, save_new_name)],
             },
-            fallbacks=[MessageHandler(
-                Filters.location |
-                Filters.contact |
-                Filters.voice |
-                Filters.sticker |
-                Filters.photo |
-                Filters.video |
-                Filters.audio |
-                Filters.document,
-                dont_know
-            )]
+            fallbacks=[
+                MessageHandler(
+                    Filters.location
+                    | Filters.contact
+                    | Filters.voice
+                    | Filters.sticker
+                    | Filters.photo
+                    | Filters.video
+                    | Filters.audio
+                    | Filters.document,
+                    dont_know,
+                )
+            ],
         )
     )
     dispatcher.add_handler(
@@ -117,19 +138,21 @@ def main() -> None:
                 )
             ],
             states={
-                'location': [MessageHandler(Filters.text, save_city)],
+                "location": [MessageHandler(Filters.text, save_city)],
             },
-            fallbacks=[MessageHandler(
-                Filters.location |
-                Filters.contact |
-                Filters.voice |
-                Filters.sticker |
-                Filters.photo |
-                Filters.video |
-                Filters.audio |
-                Filters.document,
-                dont_know
-            )]
+            fallbacks=[
+                MessageHandler(
+                    Filters.location
+                    | Filters.contact
+                    | Filters.voice
+                    | Filters.sticker
+                    | Filters.photo
+                    | Filters.video
+                    | Filters.audio
+                    | Filters.document,
+                    dont_know,
+                )
+            ],
         )
     )
     dispatcher.add_handler(
@@ -143,5 +166,5 @@ def main() -> None:
     updater.idle()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

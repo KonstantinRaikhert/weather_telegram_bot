@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+    bot:
+        image: raikhert/weatherbot
+        restart: always
+        depends_on:
+            - db
+        links:
+            - db
+        env_file:
+            - ./.env
+
+    db:
+        image: mongo
+        restart: always
+
+volumes:
+    mongo_data:
