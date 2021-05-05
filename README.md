@@ -1,3 +1,5 @@
+![example workflow](https://github.com/raikhert13/weather_telegram_bot/actions/workflows/yamdb_workflow.yml/badge.svg)
+
 # Weather Bot for travelers.
 ***
 

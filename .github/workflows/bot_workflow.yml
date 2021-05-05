@@ -71,7 +71,7 @@ jobs:
           passphrase: ${{ secrets.PASSPHRASE }}
           script: |
             cd weather-bot
-            docker pull raikhert/api_yamdb
+            docker pull raikhert/weatherbot
             docker-compose stop
             docker-compose up -d
   send_message:
